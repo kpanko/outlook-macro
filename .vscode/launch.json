@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Move aged mail: dry run",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/Move-AgedMail.ps1",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-InstallMissingGraphModule",
+                "-WhatIf"
+            ]
+        },
+        {
+            "name": "Move aged mail: run",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/Move-AgedMail.ps1",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-InstallMissingGraphModule"
+            ]
+        }
+    ]
+}
