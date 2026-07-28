@@ -55,7 +55,11 @@ PowerShell session that you started with **Run as Administrator**:
 
 ```powershell
 $script = Join-Path (Get-Location).Path "Move-AgedMail.ps1"
-$pwsh = (Get-Command pwsh.exe).Source
+$pwsh = @(
+    "$env:ProgramFiles\PowerShell\7\pwsh.exe"
+    "$env:LOCALAPPDATA\Microsoft\WindowsApps\pwsh.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $pwsh) { throw "Could not find a stable pwsh.exe path." }
 $taskUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $argument = @(
     "-NoProfile"
@@ -100,7 +104,11 @@ this creates a daily Windows Scheduled Task for 7:00 AM:
 
 ```powershell
 $script = Join-Path (Get-Location).Path "Move-AgedMail.ps1"
-$pwsh = (Get-Command pwsh.exe).Source
+$pwsh = @(
+    "$env:ProgramFiles\PowerShell\7\pwsh.exe"
+    "$env:LOCALAPPDATA\Microsoft\WindowsApps\pwsh.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $pwsh) { throw "Could not find a stable pwsh.exe path." }
 $taskUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $argument = @(
     "-NoProfile"
@@ -127,6 +135,41 @@ stored credentials or a non-interactive logon type. If that later fails because
 the sign-in token cannot refresh non-interactively, the better long-term
 version is a small Power Automate scheduled cloud flow or an Azure
 Automation/Function job using an app registration.
+
+## If the task stops running
+
+Task Scheduler shows **Last Run Result** `0x80070002`
+(`2147942402`, "file not found"), and the Task Scheduler
+Operational log records event 203 for the action.
+
+The usual cause is a `pwsh.exe` path pinned to one MSIX version:
+
+```
+C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.3.0_x64__8wekyb3d8bbwe\pwsh.exe
+```
+
+`(Get-Command pwsh.exe).Source` returns that versioned path for
+Store/MSIX installs of PowerShell 7. When PowerShell auto-updates,
+the old directory is deleted and the task can never launch again.
+
+To repair an existing task, run this from an elevated PowerShell
+session started as **your own account**. The task's DACL grants
+write access only to Administrators, so this needs elevation, and
+`$env:LOCALAPPDATA` must still resolve to your own profile:
+
+```powershell
+$pwsh = @(
+    "$env:ProgramFiles\PowerShell\7\pwsh.exe"
+    "$env:LOCALAPPDATA\Microsoft\WindowsApps\pwsh.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+$pwsh    # check this looks right before continuing
+$task = Get-ScheduledTask -TaskName "Move aged Outlook mail"
+$task.Actions[0].Execute = $pwsh
+Set-ScheduledTask -InputObject $task
+```
+
+The `WindowsApps` alias is a zero-byte reparse point, but Task
+Scheduler launches it correctly and it survives PowerShell updates.
 
 ## Notes
 
