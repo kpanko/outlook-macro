@@ -162,6 +162,7 @@ $pwsh = @(
     "$env:ProgramFiles\PowerShell\7\pwsh.exe"
     "$env:LOCALAPPDATA\Microsoft\WindowsApps\pwsh.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $pwsh) { throw "Could not find a stable pwsh.exe path." }
 $pwsh    # check this looks right before continuing
 $task = Get-ScheduledTask -TaskName "Move aged Outlook mail"
 $task.Actions[0].Execute = $pwsh
